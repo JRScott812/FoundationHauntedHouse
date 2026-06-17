@@ -1,20 +1,24 @@
+<script setup lang="ts">
+import { RouterView } from "vue-router";
+import { useSnackbar } from "@/composables/useSnackbar";
+
+const { message, visible, color } = useSnackbar();
+</script>
+
 <template>
-  <v-app>
+  <v-app class="hh-page">
     <v-main>
-      <router-view></router-view>
+      <RouterView />
     </v-main>
+
+    <v-snackbar v-model="visible" :color="color" location="top">
+      {{ message }}
+    </v-snackbar>
   </v-app>
 </template>
 
-<script>
-export default {
-  name: 'App',
-
-  components: {
-  },
-
-  data: () => ({
-    //
-  }),
-};
-</script>
+<style scoped>
+.hh-page {
+  background: var(--hh-bg-dark);
+}
+</style>

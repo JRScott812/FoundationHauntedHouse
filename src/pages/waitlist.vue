@@ -1,185 +1,210 @@
+<script setup lang="ts">
+import { computed } from "vue";
+import { storeToRefs } from "pinia";
+import { useCrossTabSync } from "@/composables/useCrossTabSync";
+import { useWaitlistTheme } from "@/composables/useWaitlistTheme";
+import { useQueueStore } from "@/stores/queue";
+import { millisecondsToHHMMSS } from "@/utils/time";
+
+const store = useQueueStore();
+const { queue, nextGroup } = storeToRefs(store);
+const { themeClass } = useWaitlistTheme();
+
+useCrossTabSync();
+
+const waitingGroups = computed(() => queue.value.slice(1));
+
+const nextGroupName = computed(() => nextGroup.value?.name ?? "");
+
+const nextGroupNumber = computed(() => nextGroup.value?.number ?? null);
+
+const heroMessage = computed(() => {
+  if (queue.value.length === 0) return "No groups waiting";
+  if (queue.value.length === 1) return "Get ready…";
+  return nextGroupName.value;
+});
+
+const showGroupNumber = computed(() => queue.value.length > 0 && nextGroupNumber.value !== null);
+
+const timeBetweenGroups = computed(() => store.avgTimeBetweenGroups);
+</script>
+
 <template>
-  <div class="page">
+  <div class="waitlist hh-page" :class="themeClass">
+    <div class="waitlist__overlay" />
 
-    <!--
-    Previous Titles:
-      - Into the Catacombs
-      - The Asylum: A Foundation Open House
-    -->
-    <div class="banner">
-      <h1>The Asylum</h1>
-      <h2>A Foundation Open House</h2>
-    </div>
+    <header class="waitlist__banner">
+      <h1 class="hh-display-title waitlist__title">The Asylum</h1>
+      <h2 class="waitlist__subtitle">A Foundation Open House</h2>
+    </header>
 
-    <div class="body">
-      <v-card class="rounded-b-0">
-        <h2>Next Group</h2>
-        <div id="next-group">
-          {{nextGroup}}
-        </div>
+    <main class="waitlist__body">
+      <v-card class="hh-glass-card waitlist__hero rounded-b-0" elevation="4">
+        <h2 class="waitlist__section-label">Next Group</h2>
+        <Transition name="fade" mode="out-in">
+          <div :key="heroMessage + String(nextGroupNumber)" class="waitlist__hero-content">
+            <div class="waitlist__next-name">{{ heroMessage }}</div>
+            <div v-if="showGroupNumber" class="waitlist__next-number">
+              Group #{{ nextGroupNumber }}
+            </div>
+          </div>
+        </Transition>
       </v-card>
 
-      <v-card class="queue rounded-t-0">
-        <table>
+      <v-card class="hh-glass-card waitlist__queue rounded-t-0" elevation="4">
+        <table v-if="waitingGroups.length > 0" class="waitlist__table">
           <tbody>
             <tr
-              v-for="(group, idx) in $store.state.queue.slice(1)"
+              v-for="(group, idx) in waitingGroups"
               :key="group.number"
+              :class="{ 'waitlist__row--odd': idx % 2 === 1 }"
             >
-              <td>
-                {{group.number}}
-              </td>
-              <td>
-                {{group.name}}
-              </td>
-              <td>
-                {{millisecondsToHHMMSS(timeBetweenGroups * (idx+1))}}
+              <td class="waitlist__cell waitlist__cell--number">{{ group.number }}</td>
+              <td class="waitlist__cell waitlist__cell--name">{{ group.name }}</td>
+              <td class="waitlist__cell waitlist__cell--wait">
+                {{
+                  millisecondsToHHMMSS(
+                    timeBetweenGroups ? timeBetweenGroups * (idx + 1) : undefined
+                  )
+                }}
               </td>
             </tr>
           </tbody>
         </table>
+        <p v-else class="waitlist__empty">No additional groups in line</p>
       </v-card>
-    </div>
-
+    </main>
   </div>
 </template>
 
-<script>
-function millisecondsToHHMMSS(milliseconds) {
-  if (isNaN(milliseconds)) {
-    return "";
-  }
-
-  let remainder = milliseconds
-  const hours = Math.floor(remainder / (1000 * 60 * 60));
-  remainder = remainder % (1000 * 60 * 60)
-  const minutes = Math.floor(remainder / (1000 * 60));
-  remainder = remainder % (1000 * 60);
-  const seconds = Math.floor(remainder / 1000);
-  return hours.toString().padStart(2, '0') + ':' +
-      minutes.toString().padStart(2, '0') + ':' +
-      seconds.toString().padStart(2, '0')
-}
-
-export default {
-    name: "view",
-    data() {
-        return {
-            queue: [],
-            headers: [
-                { text: 'Group Number' , value: 'number', width: '90%' },
-                { text: 'Group Name', value: 'name' }
-            ]
-        }
-    },
-
-    created() {
-        setInterval(() => { this.queue = this.updateList(); }, 1000);
-    },
-
-    computed: {
-        nextGroup() {
-            return this.$store.getters.nextGroup?.name;
-        },
-
-        timeBetweenGroups() {
-            return this.$store.getters.avgTimeBetweenGroups;
-        }
-    },
-
-    methods: {
-        updateList() {
-            if(localStorage.getItem('vuex')) {
-                // Replace the state object with the stored item
-                Object.assign(this.$store.state, JSON.parse(localStorage.getItem('vuex')))
-            }
-            return this.$store.state.queue;
-        },
-
-        millisecondsToHHMMSS
-    }
-}
-</script>
-
-
 <style scoped>
-
-/* Variables */
-* {
-  --catacombs-bg: url("https://www.tripsavvy.com/thmb/rfULGIEBzqBba8PCTYKLsWGsd_4=/2122x1412/filters:fill(auto,1)/ParisCatacombs-9b0f678ccab940c28916e64afa309bfb.jpg");
-  --asylum-bg: url("https://assets3.thrillist.com/v1/image/776232/1200x630/flatten;crop_down;webp=auto;jpeg_quality=70");
-
-  --bg-tint: rgba(0, 0, 0, .7);
-}
-
-.page {
-  background:
-      linear-gradient(var(--bg-tint), var(--bg-tint)),
-      var(--asylum-bg) no-repeat center center fixed;
-
-  -webkit-background-size: cover;
-  -moz-background-size: cover;
-  -o-background-size: cover;
+.waitlist {
+  position: relative;
+  min-height: 100vh;
   background-size: cover;
-
-  height: 100%;
+  background-position: center;
+  background-attachment: fixed;
 }
 
-.banner {
-  background: rgba(0, 0, 0, .7);
-  width: 100vw;
+.waitlist--asylum {
+  background-image:
+    linear-gradient(rgba(0, 0, 0, 0.72), rgba(0, 0, 0, 0.72)),
+    radial-gradient(circle at 20% 20%, rgba(139, 0, 0, 0.25), transparent 45%),
+    linear-gradient(160deg, #1a0a0a 0%, #0d0d0f 55%, #120808 100%);
 }
 
-h1, h2 {
-  text-align: center;
-  color: rgb(230, 230, 230);
+.waitlist--catacombs {
+  background-image:
+    linear-gradient(rgba(0, 0, 0, 0.78), rgba(0, 0, 0, 0.78)),
+    radial-gradient(circle at 70% 30%, rgba(90, 80, 70, 0.2), transparent 40%),
+    linear-gradient(180deg, #1c1a18 0%, #0f0e0d 50%, #181512 100%);
 }
 
-.body {
-  padding: 50px 100px;
+.waitlist__overlay {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(circle at center, transparent 30%, rgba(0, 0, 0, 0.55));
 }
 
-.v-card {
-  background-color: rgba(255, 255, 255, .5);
-}
-
-.v-card > h2 {
-  text-align: left;
-  color: rgba(0, 0, 0, .65);
-  margin-left: 5px;
-}
-
-#next-group {
-  font-size: 5em;
-  font-weight: 500;
-  line-height: 1.2em;
-
+.waitlist__banner {
+  position: relative;
+  z-index: 1;
+  background: rgba(0, 0, 0, 0.7);
+  padding: 1.25rem 1rem 1rem;
   text-align: center;
 }
 
-table {
+.waitlist__title {
+  margin: 0;
+  font-size: clamp(2rem, 5vw, 3.5rem);
+  color: var(--hh-text);
+}
+
+.waitlist__subtitle {
+  margin: 0.35rem 0 0;
+  font-size: clamp(1rem, 2.5vw, 1.5rem);
+  font-weight: 400;
+  color: var(--hh-text-dim);
+}
+
+.waitlist__body {
+  position: relative;
+  z-index: 1;
+  padding: clamp(1.5rem, 4vw, 3.5rem) clamp(1rem, 8vw, 6rem);
+}
+
+.waitlist__hero,
+.waitlist__queue {
+  background: rgba(255, 255, 255, 0.08) !important;
+}
+
+.waitlist__section-label {
+  margin: 0.5rem 0 0 0.75rem;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.75);
+}
+
+.waitlist__hero-content {
+  padding: 1rem 1rem 2rem;
+  text-align: center;
+}
+
+.waitlist__next-name {
+  font-size: clamp(4rem, 12vw, 10rem);
+  font-weight: 600;
+  line-height: 1.05;
+  color: #fff;
+  word-break: break-word;
+}
+
+.waitlist__next-number {
+  margin-top: 0.5rem;
+  font-size: clamp(1.25rem, 3vw, 2rem);
+  color: var(--hh-text-dim);
+}
+
+.waitlist__table {
   width: 100%;
   table-layout: fixed;
   border-collapse: collapse;
 }
 
-tr {
-  font-size: 1.3em;
-  background: rgba(255, 255, 255, .5);
+.waitlist__row--odd {
+  background: rgba(200, 200, 200, 0.08);
 }
 
-tr:nth-child(odd) {
-  background: rgba(200, 200, 200, .5);
+.waitlist__cell {
+  font-size: clamp(1.25rem, 2.5vw, 2rem);
+  padding: 0.65rem 0.75rem;
+  color: #fff;
 }
 
-td:first-child {
-  width: 65px;
+.waitlist__cell--number {
+  width: 90px;
   text-align: center;
 }
 
-td:last-child {
-  text-align: end;
-  padding-right: 8px;
+.waitlist__cell--name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
+.waitlist__cell--wait {
+  width: 140px;
+  text-align: end;
+  font-variant-numeric: tabular-nums;
+  font-family: ui-monospace, monospace;
+  color: var(--hh-text-dim);
+}
+
+.waitlist__empty {
+  text-align: center;
+  padding: 2rem;
+  margin: 0;
+  color: var(--hh-text-dim);
+  font-size: 1.25rem;
+}
 </style>

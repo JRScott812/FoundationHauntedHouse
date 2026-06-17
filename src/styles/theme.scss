@@ -1,0 +1,48 @@
+:root {
+  --hh-bg-dark: #0d0d0f;
+  --hh-surface: rgba(20, 20, 24, 0.85);
+  --hh-accent: #8b0000;
+  --hh-accent-muted: #4a3728;
+  --hh-text: #e8e4dc;
+  --hh-text-dim: rgba(232, 228, 220, 0.6);
+  --hh-font-display: "Creepster", cursive;
+  --hh-font-ui: "Inter", system-ui, -apple-system, sans-serif;
+}
+
+html,
+body,
+#app {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--hh-bg-dark);
+  color: var(--hh-text);
+  font-family: var(--hh-font-ui);
+}
+
+.hh-glass-card {
+  background: var(--hh-surface) !important;
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(139, 0, 0, 0.25);
+}
+
+.hh-display-title {
+  font-family: var(--hh-font-display);
+  letter-spacing: 0.04em;
+}
+
+.hh-page {
+  min-height: 100vh;
+}
+
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.35s ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
